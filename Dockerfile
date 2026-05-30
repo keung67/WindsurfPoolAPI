@@ -4,7 +4,7 @@ FROM node:20-slim AS builder
 WORKDIR /tmp-download
 
 # 安裝下載所需的 wget curl
-RUN apt-get update && apt-get install -y ca-certificates curl wget && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates wget && rm -rf /var/lib/apt/lists/*
 
 # 下載正確的 Windsurf / Codeium Language Server 二進位檔，並直接賦予執行權限
 RUN wget -q https://github.com/Exafunction/codeium/releases/latest/download/language_server_linux_x64 \
@@ -49,5 +49,5 @@ EXPOSE 3003
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
-# 【關鍵修正】使用 sh 啟動，並在背景運行每 1 分鐘呼叫一次的無窮迴圈
-CMD ["sh", "-c", "while true; do sleep 60; curl -s -X POST http://127.0.0.1/dashboard/api/accounts/refresh-credits -H \"X-Dashboard-Password: ${DASHBOARD_PASSWORD}\"; done & node src/index.js"]
+# 在背景運行每 1 分鐘呼叫一次的無窮迴圈
+CMD ["sh", "-c", "node -e \"setInterval(() => { fetch('http://127.0.0.1:3003/dashboard/api/accounts/refresh-credits', { method: 'POST', headers: { 'X-Dashboard-Password': process.env.DASHBOARD_PASSWORD || '' } }).then(() => console.log('[Cron] Auto-refreshed credits successfully.')).catch(err => console.error('[Cron] Refresh error:', err.message)); }, 60000);\" & node src/index.js"]
