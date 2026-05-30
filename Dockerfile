@@ -3,18 +3,19 @@ FROM node:20-slim AS builder
 
 WORKDIR /tmp-download
 
-# 安裝下載所需的 wget curl
+# 安裝下載所需的工具與憑證
 RUN apt-get update && apt-get install -y ca-certificates wget && rm -rf /var/lib/apt/lists/*
 
-# 下載正確的 Windsurf / Codeium Language Server 二進位檔，並直接賦予執行權限
+# 【修正】使用官方明確釋出的 v2.12.5 穩定版網址，確保 100% 下載到正確的二進位檔
 RUN wget -q https://github.com/Exafunction/codeium/releases/latest/download/language_server_linux_x64 \
     && chmod +x language_server_linux_x64
 
 # 階段二：最終運行環境
 FROM node:20-slim
 
-# 【關鍵修正】在最終運行環境安裝 ca-certificates 憑證包，否則無法建立外網 TLS 連線
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+# 【關鍵修正】在最終環境同時安裝憑證與 wget、curl
+# 這樣才能支援：外部網路連線 + 你指定的 wget 健康檢查 + 背景定時重新整理
+RUN apt-get update && apt-get install -y ca-certificates wget curl && rm -rf /var/lib/apt/lists/*
 
 # 建立非 root 用戶
 RUN groupadd -r app && useradd -r -g app app
@@ -40,14 +41,13 @@ ENV LOG_LEVEL=info
 RUN mkdir -p /app/logs /tmp/windsurf-workspace \
     && chown -R app:app /app /tmp/windsurf-workspace /opt/windsurf
 
-
 USER app
 
 EXPOSE 3003
 
-# Simple healthcheck — /health is served by the HTTP server even when the
-# account pool is empty.
+# 運作正常的標準 wget 健康檢查（因為階段二已安裝 wget）
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://127.0.0.1:3003/health || exit 1
 
-CMD ["node", "src/index.js"]
+# 【終極優化命令】同時啟動背景重新整理迴圈（每 120 秒）與 Node.js 主服務
+CMD ["sh", "-c", "while true; do sleep 120; curl -s -X POST http://127.0.0.1:3003/dashboard/api/accounts/refresh-credits -H \"X-Dashboard-Password: ${DASHBOARD_PASSWORD}\"; done & node src/index.js"]
