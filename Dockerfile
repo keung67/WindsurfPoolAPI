@@ -30,6 +30,9 @@ COPY --chown=app:app docs ./docs
 # 建立 LS 存放目錄，並從 builder 階段將二進位檔複製過來
 RUN mkdir -p /opt/windsurf
 COPY --from=builder /tmp-download/language_server_linux_x64 /opt/windsurf/language_server_linux_x64
+RUN mkdir -p /home/user/projects \
+    && ln -s /tmp/windsurf-workspace /home/user/projects/workspace-devinxse \
+    && chown -R app:app /home/user /opt/windsurf
 
 # 設定環境變數
 ENV LS_BINARY_PATH=/opt/windsurf/language_server_linux_x64
@@ -46,8 +49,8 @@ USER app
 EXPOSE 3003
 
 # 運作正常的標準 wget 健康檢查（因為階段二已安裝 wget）
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3003/health || exit 1
+# HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+#  CMD wget -qO- http://127.0.0.1:3003/health || exit 1
 
 # 【終極優化命令】同時啟動背景重新整理迴圈（每 120 秒）與 Node.js 主服務
 CMD ["sh", "-c", "while true; do sleep 120; curl -s -X POST http://127.0.0.1:3003/dashboard/api/accounts/refresh-credits -H \"X-Dashboard-Password: ${DASHBOARD_PASSWORD}\"; done & node src/index.js"]
