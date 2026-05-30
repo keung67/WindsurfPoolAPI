@@ -45,9 +45,9 @@ USER app
 
 EXPOSE 3003
 
-# 保持原本的健康檢查
+# Simple healthcheck — /health is served by the HTTP server even when the
+# account pool is empty.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "fetch('http://127.0.0').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
+  CMD wget -qO- http://127.0.0.1:3003/health || exit 1
 
-# 在背景運行每 1 分鐘呼叫一次的無窮迴圈
-CMD ["sh", "-c", "while true; do sleep 180; (echo 'POST /dashboard/api/accounts/refresh-credits HTTP/1.1'; echo 'Host: 127.0.0.1:3003'; echo \"X-Dashboard-Password: ${DASHBOARD_PASSWORD}\"; echo 'Content-Length: 0'; echo 'Connection: close'; echo; echo) > /dev/tcp/127.0.0.1/3003 2>/dev/null; done & node src/index.js"]
+CMD ["node", "src/index.js"]
