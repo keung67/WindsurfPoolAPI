@@ -1,4 +1,4 @@
-# 階段一：構建與下載環境（使用 slim 版本確保相容性）
+# 階段一：構建與下載環境
 FROM node:20-slim AS builder
 
 WORKDIR /tmp-download
@@ -7,13 +7,16 @@ WORKDIR /tmp-download
 RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
 
 # 下載正確的 Windsurf / Codeium Language Server 二進位檔，並直接賦予執行權限
-RUN wget -q https://github.com/Exafunction/codeium/releases/download/language-server-v2.12.5/language_server_linux_x64 \
+RUN wget -q https://github.com \
     && chmod +x language_server_linux_x64
 
 # 階段二：最終運行環境
 FROM node:20-slim
 
-# 建立非 root 用戶（Debian 的命令與 Alpine 稍微不同）
+# 【關鍵修正】在最終運行環境安裝 ca-certificates 憑證包，否則無法建立外網 TLS 連線
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# 建立非 root 用戶
 RUN groupadd -r app && useradd -r -g app app
 
 WORKDIR /app
@@ -42,8 +45,7 @@ USER app
 # 暴露內部的 3003 連接埠
 EXPOSE 3003
 
-# 註：Debian slim 預設沒有 wget，如果需要 Healthcheck 正常運作，可以在 stage-2 安裝 wget。
-# 為了保持容器乾淨，我們用 Node.js 內建指令來做健康檢查：
+# 使用 Node.js 內建指令來做健康檢查
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
