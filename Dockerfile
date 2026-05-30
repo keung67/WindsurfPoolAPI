@@ -53,4 +53,4 @@ EXPOSE 3003
 #  CMD wget -qO- http://127.0.0.1:3003/health || exit 1
 
 # 【終極優化命令】同時啟動背景重新整理迴圈（每 120 秒）與 Node.js 主服務
-CMD ["sh", "-c", "while true; do sleep 120; curl -s -X POST http://127.0.0.1:3003/dashboard/api/accounts/refresh-credits -H \"X-Dashboard-Password: ${DASHBOARD_PASSWORD}\"; done & node src/index.js"]
+CMD ["sh", "-c", "while true; do sleep 30; curl -s -X POST http://127.0.0.1:3003/dashboard/api/accounts/refresh-credits -H \"X-Dashboard-Password: ${DASHBOARD_PASSWORD}\"; done & node src/index.js"]
