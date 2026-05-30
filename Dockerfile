@@ -50,4 +50,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
 # 在背景運行每 1 分鐘呼叫一次的無窮迴圈
-CMD ["sh", "-c", "node -e \"setInterval(() => { fetch('http://127.0.0.1:3003/dashboard/api/accounts/refresh-credits', { method: 'POST', headers: { 'X-Dashboard-Password': process.env.DASHBOARD_PASSWORD || '' } }).then(() => console.log('[Cron] Auto-refreshed credits successfully.')).catch(err => console.error('[Cron] Refresh error:', err.message)); }, 60000);\" & node src/index.js"]
+CMD ["sh", "-c", "while true; do sleep 180; wget --quiet --method=POST --header=\"X-Dashboard-Password: ${DASHBOARD_PASSWORD}\" http://127.0.0.1:3003/dashboard/api/accounts/refresh-credits -O /dev/null; done & node src/index.js"]
