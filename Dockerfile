@@ -7,7 +7,7 @@ WORKDIR /tmp-download
 RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
 
 # 下載正確的 Windsurf / Codeium Language Server 二進位檔，並直接賦予執行權限
-RUN wget -q https://github.com/Exafunction/codeium/releases/download/language-server-v2.12.5/language_server_linux_x64 \
+RUN wget -q https://github.com/Exafunction/codeium/releases/latest/download/language_server_linux_x64 \
     && chmod +x language_server_linux_x64
 
 # 階段二：最終運行環境
